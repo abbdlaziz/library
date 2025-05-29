@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Java
         uses: actions/setup-java@v3
@@ -19,72 +19,30 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build JAR
-        run: |
-          chmod +x ./mvnw
-          ./mvnw clean package -DskipTests
+      - name: Make Maven wrapper executable ✅
+        run: chmod +x ./mvnw
 
-      - name: Copy JAR to server (preserving target/)
-        uses: appleboy/scp-action@v0.1.7
+      - name: Build JAR
+        run: ./mvnw clean package -DskipTests
+
+      - name: Copy JAR to ECS server via SSH
+        uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "target/*.jar"
-          target: "/home/app/temp/"  # JAR will land in /home/app/temp/target/
-          rm: true
+          target: "/home/app/"
 
-      - name: Deploy and restart app
-        uses: appleboy/ssh-action@v0.1.8
+      - name: SSH and restart app
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            echo "=== DEPLOYMENT STARTED ==="
-      
-            # Paths
-            TEMP_JAR_DIR="/home/app/temp/target"
-            DEPLOY_DIR="/home/app/target"
-            LOG_FILE="$DEPLOY_DIR/output.log"
+            pkill -f 'java -jar' || true
+            nohup java -jar /home/app/*.jar > /home/app/output.log 2>&1 &
 
-            # Verify new JAR exists
-            echo "1. Checking for new JAR..."
-            NEW_JAR=$(ls $TEMP_JAR_DIR/*.jar 2>/dev/null | head -1)
-            [ -z "$NEW_JAR" ] && { echo "❌ ERROR: No JAR found!"; ls -la $TEMP_JAR_DIR; exit 1; }
-            echo "✔ Found JAR: $NEW_JAR"
 
-            # Stop old app gracefully
-            echo "2. Stopping existing app..."
-            OLD_PID=$(pgrep -f 'java -jar' || echo "")
-            if [ -n "$OLD_PID" ]; then
-            echo "Stopping PID $OLD_PID..."
-            kill $OLD_PID
-            # Wait for process to exit
-            while kill -0 $OLD_PID 2>/dev/null; do
-            sleep 1
-            echo "Waiting for process $OLD_PID to terminate..."
-            done
-            fi
 
-            # Deploy new JAR
-            echo "3. Moving JAR to deploy location..."
-            mkdir -p $DEPLOY_DIR
-            mv -f $NEW_JAR $DEPLOY_DIR/
-  
-            # Start new app
-            echo "4. Starting application..."
-            nohup java -jar $DEPLOY_DIR/*.jar > $LOG_FILE 2>&1 &
-            APP_PID=$!
-            echo "Application started with PID $APP_PID"
-  
-            # Verify startup
-            echo "5. Verifying deployment..."
-            sleep 5
-            if ! kill -0 $APP_PID 2>/dev/null; then
-            echo "❌ ERROR: App failed to start! Logs:"
-            tail -n 50 $LOG_FILE
-            exit 1
-            fi
-            echo "✔ Success! App running with PID $APP_PID"
-            echo "=== DEPLOYMENT COMPLETE ==="
