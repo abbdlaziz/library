@@ -42,4 +42,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             pkill -f 'java -jar' || true
-            nohup java -jar /home/${{ secrets.USERNAME }}/app/*.jar > /home/${{ secrets.USERNAME }}/app/output.log 2>&1 &
+            nohup java -jar /home/app/*.jar > /home/app/output.log 2>&1 &
+
