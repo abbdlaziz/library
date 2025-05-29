@@ -24,15 +24,15 @@ jobs:
           chmod +x ./mvnw
           ./mvnw clean package -DskipTests
 
-      - name: Copy JAR to temp directory on server
+      - name: Copy JAR to server (preserving target/)
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "target/*.jar"
-          target: "/home/app/temp-target/"  # Changed to temp-target to avoid confusion
-          rm: true  # Cleans up old files
+          target: "/home/app/temp/"  # JAR will land in /home/app/temp/target/
+          rm: true
 
       - name: Deploy and restart app
         uses: appleboy/ssh-action@v0.1.8
@@ -43,37 +43,35 @@ jobs:
           script: |
             echo "=== DEPLOYMENT STARTED ==="
             
-            # Define paths
-            TEMP_DIR="/home/app/temp-target"
+            # Paths (account for nested target/ directory)
+            TEMP_JAR_DIR="/home/app/temp/target"  # JAR is here after SCP
             DEPLOY_DIR="/home/app/target"
             LOG_FILE="$DEPLOY_DIR/output.log"
 
             # Verify new JAR exists
             echo "1. Checking for new JAR..."
-            NEW_JAR=$(ls $TEMP_DIR/*.jar 2>/dev/null | head -1)
+            NEW_JAR=$(ls $TEMP_JAR_DIR/*.jar 2>/dev/null | head -1)
             if [ -z "$NEW_JAR" ]; then
-              echo "❌ ERROR: No JAR found in $TEMP_DIR!"
-              ls -la $TEMP_DIR/  # Debug: List temp dir contents
+              echo "❌ ERROR: No JAR found in $TEMP_JAR_DIR!"
+              echo "Contents of /home/app/temp/:"
+              ls -la /home/app/temp/
               exit 1
             fi
             echo "✔ Found JAR: $NEW_JAR"
 
-            # Stop old app (if running)
+            # Stop old app
             echo "2. Stopping existing app..."
             OLD_PID=$(pgrep -f 'java -jar' || echo "")
             if [ -n "$OLD_PID" ]; then
               echo "Stopping PID $OLD_PID..."
               kill $OLD_PID
-              sleep 3  # Wait for shutdown
-            else
-              echo "No running app found."
+              sleep 3
             fi
 
             # Deploy new JAR
-            echo "3. Deploying new version..."
+            echo "3. Moving JAR to deploy location..."
             mkdir -p $DEPLOY_DIR
             mv -f $NEW_JAR $DEPLOY_DIR/
-            chmod 755 $DEPLOY_DIR/*.jar
 
             # Start new app
             echo "4. Starting application..."
