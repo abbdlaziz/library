@@ -13,6 +13,6 @@ services:
       - key: SPRING_DATASOURCE_USERNAME
         value: postgres.vvkiozfhafgtkpffupjo
       - key: SPRING_DATASOURCE_PASSWORD
-        value: aztestproject123
+        value: aztestproject123!
       - key: SPRING_JPA_HIBERNATE_DDL_AUTO
         value: none
