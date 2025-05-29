@@ -8,8 +8,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class CorsFallBackController {
 
-    @RequestMapping(value = "/**", method = RequestMethod.OPTIONS)
-    public ResponseEntity<?> handleOptions() {
+    @RequestMapping(value = "/**", method = {
+            RequestMethod.GET,
+            RequestMethod.POST,
+            RequestMethod.PUT,
+            RequestMethod.DELETE,
+            RequestMethod.OPTIONS,
+            RequestMethod.PATCH
+    })
+    public ResponseEntity<?> handleCorsFallback() {
         return ResponseEntity.ok().build();
     }
 }
