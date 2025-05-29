@@ -17,7 +17,8 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-
+          
+      - name: Make
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
 
