@@ -1,11 +1,12 @@
-name: Deploy to Alibaba ECS
+name: Deploy Spring Boot to ECS
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,28 +16,30 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
-          java-version: '17'
           distribution: 'temurin'
-          
-      - name: Make
+          java-version: '17'
+
+      - name: Make Maven wrapper executable ✅
+        run: chmod +x ./mvnw
+
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
 
-      - name: Copy JAR to ECS
-        uses: appleboy/scp-action@v0.1.4
+      - name: Copy JAR to ECS server via SSH
+        uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: target/*.jar
-          target: /home/${{ secrets.USERNAME }}/app/
+          source: "target/*.jar"
+          target: "/home/${{ secrets.USERNAME }}/app"
 
-      - name: Restart Spring Boot app
-        uses: appleboy/ssh-action@v1.0.0
+      - name: SSH and restart app
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            pkill -f 'java.*.jar' || true
-            nohup java -jar /home/${{ secrets.USERNAME }}/app/*.jar > app.log 2>&1 &
+            pkill -f 'java -jar' || true
+            nohup java -jar /home/${{ secrets.USERNAME }}/app/*.jar > /home/${{ secrets.USERNAME }}/app/output.log 2>&1 &
