@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @OpenAPIDefinition(
         servers = {
+                @Server(url = "/", description = "Default"),
                 @Server(url = "http://localhost:8080", description = "Local Server"),
                 @Server(url = "https://library-springboot-api-production.up.railway.app", description = "Production")
         }

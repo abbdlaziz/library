@@ -36,4 +36,19 @@ public class BorrowedBookController {
         useCase.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<BorrowedBookResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(useCase.findById(id));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<BorrowedBookResponse> update(
+            @PathVariable Long id,
+            @RequestBody BorrowedBookRequest request
+    ) {
+        return ResponseEntity.ok(useCase.update(id, request));
+    }
+
+
 }

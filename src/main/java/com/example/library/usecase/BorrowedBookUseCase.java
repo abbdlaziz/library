@@ -36,6 +36,12 @@ public class BorrowedBookUseCase {
                 .collect(Collectors.toList());
     }
 
+    public BorrowedBookResponse findById(Long id) {
+        BorrowedBook borrowedBook = borrowedBookRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Borrowed book not found"));
+        return toResponse(borrowedBook);
+    }
+
     public BorrowedBookResponse create(BorrowedBookRequest request) {
         Book book = bookRepository.findById(request.getBookId())
                 .orElseThrow(() -> new NoSuchElementException("Book not found"));
@@ -50,6 +56,23 @@ public class BorrowedBookUseCase {
                 .build();
 
         return toResponse(borrowedBookRepository.save(borrowedBook));
+    }
+
+    public BorrowedBookResponse update(Long id, BorrowedBookRequest request) {
+        BorrowedBook existing = borrowedBookRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Borrowed book not found"));
+
+        Book book = bookRepository.findById(request.getBookId())
+                .orElseThrow(() -> new NoSuchElementException("Book not found"));
+        Member member = memberRepository.findById(request.getMemberId())
+                .orElseThrow(() -> new NoSuchElementException("Member not found"));
+
+        existing.setBook(book);
+        existing.setMember(member);
+        existing.setBorrowDate(LocalDate.parse(request.getBorrowDate()));
+        existing.setReturnDate(LocalDate.parse(request.getReturnDate()));
+
+        return toResponse(borrowedBookRepository.save(existing));
     }
 
     public void delete(Long id) {
