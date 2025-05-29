@@ -11,15 +11,17 @@ public class GlobalCorsConfig {
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
-
             @Override
             public void addCorsMappings(@NonNull CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("https://your-app.netlify.app") // ✅ Exact origin
+                        .allowedOrigins(
+                                "https://samsungbook.netlify.app",
+                                "http://localhost:8080"
+                        )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
-                        .allowCredentials(true) // ✅ if you're using cookies or auth headers
-                        .exposedHeaders("Authorization"); // optional
+                        .allowCredentials(true)
+                        .exposedHeaders("Authorization");
             }
         };
     }
