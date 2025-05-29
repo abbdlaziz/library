@@ -41,8 +41,16 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            echo "Killing any running Spring Boot app..."
             pkill -f 'java -jar' || true
+
+            echo "Starting new app..."
             nohup java -jar /home/app/*.jar > /home/app/output.log 2>&1 &
+  
+            echo "Sleeping to allow background app to start..."
+            sleep 5
+
+            echo "App launched in background. Done."
 
 
 
