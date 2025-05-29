@@ -1,4 +1,4 @@
-package config;
+package com.example.library.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,9 +15,11 @@ public class GlobalCorsConfig {
             @Override
             public void addCorsMappings(@NonNull CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("*")
+                        .allowedOrigins("https://your-app.netlify.app") // ✅ Exact origin
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*");
+                        .allowedHeaders("*")
+                        .allowCredentials(true) // ✅ if you're using cookies or auth headers
+                        .exposedHeaders("Authorization"); // optional
             }
         };
     }
