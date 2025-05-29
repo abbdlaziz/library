@@ -46,6 +46,6 @@ jobs:
             echo "Killing existing java processes..."
             pkill -f 'java -jar' || true
             echo "Starting new app..."
-            nohup java -jar /home/app/*.jar > /home/app/output.log 2>&1 &
+            nohup java -jar /home/app/target/*.jar > /home/app/output.log 2>&1 &
 
 
