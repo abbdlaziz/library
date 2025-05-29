@@ -8,99 +8,86 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: production  # Optional: Use GitHub Environments for secrets
 
     steps:
-      # --- CHECKOUT CODE ---
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # --- SET UP JAVA ---
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'maven'
 
-      # --- BUILD JAR ---
-      - name: Build with Maven
+      - name: Build JAR
         run: |
           chmod +x ./mvnw
           ./mvnw clean package -DskipTests
 
-      # --- COPY JAR TO SERVER (TEMPORARY LOCATION) ---
-      - name: Upload JAR to server (temp location)
+      - name: Copy JAR to temp directory on server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "target/*.jar"
-          target: "/home/app/temp/"
-          rm: true  # Remove old temp files
+          target: "/home/app/temp-target/"  # Changed to temp-target to avoid confusion
+          rm: true  # Cleans up old files
 
-      # --- DEPLOY & RESTART APP ---
-      - name: Deploy and restart application
+      - name: Deploy and restart app
         uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # --- SETUP ---
-            echo "=== STARTING DEPLOYMENT ==="
-            DEPLOY_DIR="/home/app"
-            TEMP_DIR="$DEPLOY_DIR/temp"
-            TARGET_DIR="$DEPLOY_DIR/target"
-            LOG_FILE="$TARGET_DIR/output.log"
+            echo "=== DEPLOYMENT STARTED ==="
+            
+            # Define paths
+            TEMP_DIR="/home/app/temp-target"
+            DEPLOY_DIR="/home/app/target"
+            LOG_FILE="$DEPLOY_DIR/output.log"
 
-            # --- VERIFY ENVIRONMENT ---
-            echo "1. Checking Java version..."
-            java -version || { echo "❌ Java not found"; exit 1; }
-
-            echo "2. Checking disk space..."
-            df -h
-
-            # --- FIND NEW JAR ---
-            echo "3. Locating new JAR file..."
-            NEW_JAR=$(ls $TEMP_DIR/*.jar | head -1)
+            # Verify new JAR exists
+            echo "1. Checking for new JAR..."
+            NEW_JAR=$(ls $TEMP_DIR/*.jar 2>/dev/null | head -1)
             if [ -z "$NEW_JAR" ]; then
-              echo "❌ No JAR found in $TEMP_DIR"
+              echo "❌ ERROR: No JAR found in $TEMP_DIR!"
+              ls -la $TEMP_DIR/  # Debug: List temp dir contents
               exit 1
             fi
-            echo "Found: $NEW_JAR"
+            echo "✔ Found JAR: $NEW_JAR"
 
-            # --- STOP OLD PROCESS (IF RUNNING) ---
-            echo "4. Stopping existing application..."
+            # Stop old app (if running)
+            echo "2. Stopping existing app..."
             OLD_PID=$(pgrep -f 'java -jar' || echo "")
             if [ -n "$OLD_PID" ]; then
               echo "Stopping PID $OLD_PID..."
               kill $OLD_PID
-              sleep 5  # Graceful shutdown period
+              sleep 3  # Wait for shutdown
             else
-              echo "No running application found."
+              echo "No running app found."
             fi
 
-            # --- ATOMIC DEPLOYMENT ---
-            echo "5. Deploying new version..."
-            mkdir -p $TARGET_DIR
-            mv -f $NEW_JAR $TARGET_DIR/
-            chmod 755 $TARGET_DIR/*.jar
+            # Deploy new JAR
+            echo "3. Deploying new version..."
+            mkdir -p $DEPLOY_DIR
+            mv -f $NEW_JAR $DEPLOY_DIR/
+            chmod 755 $DEPLOY_DIR/*.jar
 
-            # --- START NEW PROCESS ---
-            echo "6. Starting application..."
-            nohup java -jar $TARGET_DIR/*.jar > $LOG_FILE 2>&1 &
+            # Start new app
+            echo "4. Starting application..."
+            nohup java -jar $DEPLOY_DIR/*.jar > $LOG_FILE 2>&1 &
 
-            # --- VERIFY SUCCESS ---
-            echo "7. Verifying deployment..."
+            # Verify startup
+            echo "5. Verifying deployment..."
             sleep 5
             NEW_PID=$(pgrep -f 'java -jar' || echo "")
             if [ -z "$NEW_PID" ]; then
-              echo "❌ Deployment failed! Last 50 lines of log:"
+              echo "❌ ERROR: App failed to start! Logs:"
               tail -n 50 $LOG_FILE
               exit 1
             else
-              echo "✅ Success! PID: $NEW_PID"
+              echo "✔ Success! New PID: $NEW_PID"
               echo "=== DEPLOYMENT COMPLETE ==="
             fi
