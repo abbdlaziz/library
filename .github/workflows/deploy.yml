@@ -19,7 +19,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Make Maven wrapper executable ✅
+      - name: Make Maven wrapper executable
         run: chmod +x ./mvnw
 
       - name: Build JAR
@@ -42,14 +42,11 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo "Killing any running Spring Boot app..."
-            pkill -f 'java -jar' || true
-
+            pkill -f 'java -jar' || echo "No running process found - proceeding"
+            echo "Creating target directory if needed..."
+            mkdir -p /home/app/target
             echo "Starting new app..."
-            nohup java -jar /home/app/target/library-0.0.1-SNAPSHOT.jar > /home/app/target/output.log 2>&1 &
-
+            nohup java -jar /home/app/target/*.jar > /home/app/target/output.log 2>&1 &
             sleep 5
-            echo "Tail logs:"
+            echo "Deployment complete. Tail logs:"
             tail -n 30 /home/app/target/output.log
-
-
-
