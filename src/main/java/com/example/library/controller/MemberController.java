@@ -1,6 +1,5 @@
 package com.example.library.controller;
 
-
 import com.example.library.model.rq.MemberRequest;
 import com.example.library.model.rs.MemberResponse;
 import com.example.library.usecase.MemberUseCase;
@@ -9,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/members")
 @RequiredArgsConstructor
