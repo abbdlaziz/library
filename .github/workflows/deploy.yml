@@ -42,7 +42,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo "Files in /home/app:"
-            ls -l /home/app
+            ls -l /home/app/target
             echo "Killing existing java processes..."
             pkill -f 'java -jar' || true
             echo "Starting new app..."
